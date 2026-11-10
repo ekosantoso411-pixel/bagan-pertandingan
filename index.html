@@ -1,0 +1,215 @@
+import React, { useState } from 'react';
+
+export default function App() {
+  // Inisialisasi 32 tim (Bisa diedit oleh pengguna nantinya)
+  const initialR32 = Array.from({ length: 32 }, (_, i) => `Tim ${i + 1}`);
+
+  // State untuk menyimpan data setiap babak
+  const [bracket, setBracket] = useState({
+    r32: initialR32,
+    r16: Array(16).fill(null),
+    r8: Array(8).fill(null),
+    r4: Array(4).fill(null),
+    r2: Array(2).fill(null), // Final
+    champion: null
+  });
+
+  // Fungsi untuk meloloskan tim ke babak selanjutnya
+  const handleAdvance = (nextRoundKey, nextRoundSlotIndex, teamName) => {
+    if (!teamName) return; // Jangan loloskan jika nama tim kosong
+    setBracket(prev => {
+      const newState = { ...prev };
+      newState[nextRoundKey] = [...newState[nextRoundKey]];
+      newState[nextRoundKey][nextRoundSlotIndex] = teamName;
+      return newState;
+    });
+  };
+
+  // Fungsi untuk mengubah nama tim di Babak 32 (Input awal)
+  const handleTeamNameChange = (index, newName) => {
+    setBracket(prev => {
+      const newR32 = [...prev.r32];
+      newR32[index] = newName;
+      return { ...prev, r32: newR32 };
+    });
+  };
+
+  // Reset seluruh bagan
+  const resetBracket = () => {
+    if (window.confirm("Apakah Anda yakin ingin mereset seluruh bagan pertandingan?")) {
+      setBracket({
+        r32: initialR32,
+        r16: Array(16).fill(null),
+        r8: Array(8).fill(null),
+        r4: Array(4).fill(null),
+        r2: Array(2).fill(null),
+        champion: null
+      });
+    }
+  };
+
+  // Komponen untuk satu kotak pertandingan (Match)
+  const renderMatch = (currentRoundKey, nextRoundKey, matchIndex, isEditable = false) => {
+    const team1Index = matchIndex * 2;
+    const team2Index = matchIndex * 2 + 1;
+    const team1 = bracket[currentRoundKey][team1Index];
+    const team2 = bracket[currentRoundKey][team2Index];
+
+    return (
+      <div key={`match-${currentRoundKey}-${matchIndex}`} className="flex flex-col w-40 sm:w-48 bg-slate-800 border border-slate-600 rounded-lg overflow-hidden shadow-lg m-2 text-sm z-10 hover:border-blue-400 transition-colors">
+        {/* Tim 1 */}
+        <div
+          className={`p-2 flex items-center justify-between border-b border-slate-600 transition-colors h-10
+            ${team1 ? 'cursor-pointer hover:bg-blue-600 hover:text-white' : 'text-slate-500'}`}
+          onClick={() => handleAdvance(nextRoundKey, matchIndex, team1)}
+          title={team1 ? "Klik untuk meloloskan tim ini" : ""}
+        >
+          {isEditable ? (
+            <input
+              type="text"
+              value={team1 || ''}
+              onChange={(e) => handleTeamNameChange(team1Index, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-transparent text-white w-full outline-none font-semibold border-b border-transparent focus:border-blue-300 placeholder-slate-600"
+              placeholder="Nama Tim..."
+            />
+          ) : (
+            <span className="font-semibold truncate w-full">{team1 || '--'}</span>
+          )}
+        </div>
+        
+        {/* Tim 2 */}
+        <div
+          className={`p-2 flex items-center justify-between transition-colors h-10
+            ${team2 ? 'cursor-pointer hover:bg-blue-600 hover:text-white' : 'text-slate-500'}`}
+          onClick={() => handleAdvance(nextRoundKey, matchIndex, team2)}
+          title={team2 ? "Klik untuk meloloskan tim ini" : ""}
+        >
+          {isEditable ? (
+            <input
+              type="text"
+              value={team2 || ''}
+              onChange={(e) => handleTeamNameChange(team2Index, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-transparent text-white w-full outline-none font-semibold border-b border-transparent focus:border-blue-300 placeholder-slate-600"
+              placeholder="Nama Tim..."
+            />
+          ) : (
+            <span className="font-semibold truncate w-full">{team2 || '--'}</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Komponen untuk satu kolom (kumpulan Match dalam 1 babak)
+  const renderColumn = (title, currentRoundKey, nextRoundKey, startIndex, matchCount) => {
+    const matches = [];
+    for (let i = 0; i < matchCount; i++) {
+      matches.push(renderMatch(currentRoundKey, nextRoundKey, startIndex + i, currentRoundKey === 'r32'));
+    }
+    return (
+      <div key={`${currentRoundKey}-${startIndex}`} className="flex flex-col min-w-max px-2">
+        <div className="text-center font-bold text-slate-400 mb-6 h-6 uppercase text-xs tracking-wider">{title}</div>
+        <div className="flex flex-col justify-around flex-grow py-2">
+          {matches}
+        </div>
+      </div>
+    );
+  };
+
+  // Komponen khusus untuk pertandingan Grand Final
+  const renderFinalMatch = () => {
+    const team1 = bracket.r2[0];
+    const team2 = bracket.r2[1];
+
+    return (
+      <div className="flex flex-col items-center mx-4 sm:mx-8 z-20 min-w-max">
+        <div className="text-xl font-black text-yellow-400 mb-6 text-center drop-shadow-md tracking-wider">GRAND FINAL</div>
+        
+        <div className="flex flex-col w-56 bg-slate-900 border-2 border-yellow-500 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(234,179,8,0.3)] m-2 text-base">
+          <div
+            className={`p-4 border-b border-slate-700 transition-colors text-center h-14 flex items-center justify-center
+              ${team1 ? 'cursor-pointer hover:bg-yellow-600 hover:text-white' : 'text-slate-500'}`}
+            onClick={() => setBracket(p => ({ ...p, champion: team1 }))}
+          >
+            <span className="font-bold truncate w-full">{team1 || 'Juara Pol A'}</span>
+          </div>
+          <div
+            className={`p-4 transition-colors text-center h-14 flex items-center justify-center
+              ${team2 ? 'cursor-pointer hover:bg-yellow-600 hover:text-white' : 'text-slate-500'}`}
+            onClick={() => setBracket(p => ({ ...p, champion: team2 }))}
+          >
+            <span className="font-bold truncate w-full">{team2 || 'Juara Pol B'}</span>
+          </div>
+        </div>
+
+        {/* Display Juara */}
+        <div className="mt-16 text-center">
+          <div className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-widest">🏆 Juara Turnamen 🏆</div>
+          <div className="px-8 py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-slate-900 font-black text-2xl rounded-full shadow-[0_0_30px_rgba(234,179,8,0.8)] min-w-[200px]">
+            {bracket.champion || '???'}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
+      {/* Header Aplikasi */}
+      <header className="bg-slate-900 border-b border-slate-800 p-6 flex flex-col sm:flex-row justify-between items-center shadow-md shrink-0">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-400">
+            Futsal Tournament Bracket
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">Sistem Gugur 32 Tim - Dua Pol (A & B)</p>
+        </div>
+        <div className="mt-4 sm:mt-0 flex gap-4 items-center">
+          <p className="text-xs text-slate-500 hidden md:block max-w-xs text-right">
+            Ubah nama tim di kolom paling luar. Klik kotak tim untuk meloloskan mereka ke babak berikutnya.
+          </p>
+          <button 
+            onClick={resetBracket}
+            className="bg-red-900/50 hover:bg-red-600 text-red-200 hover:text-white border border-red-800 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          >
+            Reset Bagan
+          </button>
+        </div>
+      </header>
+
+      {/* Area Bagan Utama */}
+      <main className="flex-grow overflow-x-auto overflow-y-auto relative p-8">
+        
+        {/* Background Watermark Pol A & B */}
+        <div className="absolute top-1/2 left-24 -translate-y-1/2 text-9xl font-black text-slate-800/30 pointer-events-none -z-10">POL A</div>
+        <div className="absolute top-1/2 right-24 -translate-y-1/2 text-9xl font-black text-slate-800/30 pointer-events-none -z-10">POL B</div>
+
+        <div className="flex items-stretch justify-center min-w-[1400px] min-h-[850px] h-full mx-auto">
+          
+          {/* POL A (Kiri ke Tengah) */}
+          <div className="flex flex-row flex-grow justify-end pr-2 space-x-2">
+            {renderColumn('Babak 32', 'r32', 'r16', 0, 8)}
+            {renderColumn('Babak 16', 'r16', 'r8', 0, 4)}
+            {renderColumn('8 Besar', 'r8', 'r4', 0, 2)}
+            {renderColumn('Semi Final', 'r4', 'r2', 0, 1)}
+          </div>
+
+          {/* GRAND FINAL (Tengah) */}
+          <div className="flex flex-col justify-center shrink-0">
+            {renderFinalMatch()}
+          </div>
+
+          {/* POL B (Kanan ke Tengah - di-render terbalik secara visual) */}
+          <div className="flex flex-row-reverse flex-grow justify-end pl-2 space-x-2 space-x-reverse">
+            {renderColumn('Babak 32', 'r32', 'r16', 8, 8)}
+            {renderColumn('Babak 16', 'r16', 'r8', 4, 4)}
+            {renderColumn('8 Besar', 'r8', 'r4', 2, 2)}
+            {renderColumn('Semi Final', 'r4', 'r2', 1, 1)}
+          </div>
+
+        </div>
+      </main>
+    </div>
+  );
+}
