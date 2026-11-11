@@ -86,13 +86,13 @@
     <!-- Main Scrollable Area -->
     <main class="flex-1 overflow-auto stadium-bg relative">
         <!-- Inner container stretching wide enough for all 9 columns -->
-        <div id="bracket-inner" class="min-w-[2800px] min-h-[900px] h-full p-12 relative flex dot-grid opacity-95">
+        <div id="bracket-inner" class="min-w-[3400px] min-h-[1400px] h-full p-16 relative flex dot-grid opacity-95">
             
             <!-- Canvas for drawing connecting lines -->
             <canvas id="lines-canvas" class="absolute top-0 left-0 w-full h-full z-0 pointer-events-none"></canvas>
             
             <!-- Bracket DOM Nodes -->
-            <div id="bracket-container" class="flex justify-between items-stretch w-full h-full z-10 relative">
+            <div id="bracket-container" class="flex justify-between items-stretch w-full h-full z-10 relative px-4">
                 <!-- Columns will be injected here via JavaScript -->
             </div>
             
@@ -210,7 +210,8 @@
             cols.forEach((col, index) => {
                 const colDiv = document.createElement('div');
                 // Use precise flex heights instead of justify-around for perfect geometric alignment
-                colDiv.className = 'flex flex-col items-center h-full w-56 relative';
+                // Diperlebar menjadi w-64 agar nama tim dan jarak kotak lebih lega dan premium
+                colDiv.className = 'flex flex-col items-center h-full w-64 relative';
                 
                 // Column Header
                 const titleDiv = document.createElement('div');
