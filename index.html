@@ -119,7 +119,7 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
         // -- DATA STRUCTURE & STATE MANAGEMENT --
         let matches = {};
         
@@ -175,31 +175,32 @@
             return initialMatches;
         }
 
+        // -- LOCAL STORAGE SETUP (FIXED) --
         function saveState() {
-            localStorage.setItem('futsalBracketData', JSON.stringify(matches));
+            try {
+                localStorage.setItem('futsalProBracketData', JSON.stringify(matches));
+            } catch (e) {
+                console.error("Gagal menyimpan ke Local Storage:", e);
+            }
         }
 
         function loadState() {
-            const saved = localStorage.getItem('futsalBracketData');
-            if (saved) {
-                try {
-                    matches = JSON.parse(saved);
-                    return true;
-                } catch(e) { console.error("Error parsing save data"); }
-            }
-            return false;
-        }
-
-        function init() {
-            if (!loadState()) {
+            try {
+                const savedData = localStorage.getItem('futsalProBracketData');
+                if (savedData) {
+                    matches = JSON.parse(savedData);
+                } else {
+                    matches = createDefaultMatches();
+                    saveState();
+                }
+            } catch (e) {
+                console.error("Gagal memuat data, menggunakan data default:", e);
                 matches = createDefaultMatches();
-                saveState();
             }
+            
+            // Render UI and draw lines once data is loaded
             render();
-            // Wait for DOM & Fonts before drawing perfect lines
-            document.fonts.ready.then(() => {
-                setTimeout(drawLines, 100);
-            });
+            document.fonts.ready.then(() => { setTimeout(drawLines, 100); });
         }
 
         // -- RENDERING LOGIC --
@@ -490,8 +491,8 @@
             showToast("Bracket has been successfully reset.", "success");
         };
 
-        // Bootstrap App
-        init();
+        // Bootstrap App using Local Storage
+        loadState();
 
     </script>
 </body>
