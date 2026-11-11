@@ -1,215 +1,461 @@
-import React, { useState } from 'react';
-
-export default function App() {
-  // Inisialisasi 32 tim (Bisa diedit oleh pengguna nantinya)
-  const initialR32 = Array.from({ length: 32 }, (_, i) => `Tim ${i + 1}`);
-
-  // State untuk menyimpan data setiap babak
-  const [bracket, setBracket] = useState({
-    r32: initialR32,
-    r16: Array(16).fill(null),
-    r8: Array(8).fill(null),
-    r4: Array(4).fill(null),
-    r2: Array(2).fill(null), // Final
-    champion: null
-  });
-
-  // Fungsi untuk meloloskan tim ke babak selanjutnya
-  const handleAdvance = (nextRoundKey, nextRoundSlotIndex, teamName) => {
-    if (!teamName) return; // Jangan loloskan jika nama tim kosong
-    setBracket(prev => {
-      const newState = { ...prev };
-      newState[nextRoundKey] = [...newState[nextRoundKey]];
-      newState[nextRoundKey][nextRoundSlotIndex] = teamName;
-      return newState;
-    });
-  };
-
-  // Fungsi untuk mengubah nama tim di Babak 32 (Input awal)
-  const handleTeamNameChange = (index, newName) => {
-    setBracket(prev => {
-      const newR32 = [...prev.r32];
-      newR32[index] = newName;
-      return { ...prev, r32: newR32 };
-    });
-  };
-
-  // Reset seluruh bagan
-  const resetBracket = () => {
-    if (window.confirm("Apakah Anda yakin ingin mereset seluruh bagan pertandingan?")) {
-      setBracket({
-        r32: initialR32,
-        r16: Array(16).fill(null),
-        r8: Array(8).fill(null),
-        r4: Array(4).fill(null),
-        r2: Array(2).fill(null),
-        champion: null
-      });
-    }
-  };
-
-  // Komponen untuk satu kotak pertandingan (Match)
-  const renderMatch = (currentRoundKey, nextRoundKey, matchIndex, isEditable = false) => {
-    const team1Index = matchIndex * 2;
-    const team2Index = matchIndex * 2 + 1;
-    const team1 = bracket[currentRoundKey][team1Index];
-    const team2 = bracket[currentRoundKey][team2Index];
-
-    return (
-      <div key={`match-${currentRoundKey}-${matchIndex}`} className="flex flex-col w-40 sm:w-48 bg-slate-800 border border-slate-600 rounded-lg overflow-hidden shadow-lg m-2 text-sm z-10 hover:border-blue-400 transition-colors">
-        {/* Tim 1 */}
-        <div
-          className={`p-2 flex items-center justify-between border-b border-slate-600 transition-colors h-10
-            ${team1 ? 'cursor-pointer hover:bg-blue-600 hover:text-white' : 'text-slate-500'}`}
-          onClick={() => handleAdvance(nextRoundKey, matchIndex, team1)}
-          title={team1 ? "Klik untuk meloloskan tim ini" : ""}
-        >
-          {isEditable ? (
-            <input
-              type="text"
-              value={team1 || ''}
-              onChange={(e) => handleTeamNameChange(team1Index, e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-transparent text-white w-full outline-none font-semibold border-b border-transparent focus:border-blue-300 placeholder-slate-600"
-              placeholder="Nama Tim..."
-            />
-          ) : (
-            <span className="font-semibold truncate w-full">{team1 || '--'}</span>
-          )}
-        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FUTSAL GALAMUDA - 32 Team Tournament Bracket</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
         
-        {/* Tim 2 */}
-        <div
-          className={`p-2 flex items-center justify-between transition-colors h-10
-            ${team2 ? 'cursor-pointer hover:bg-blue-600 hover:text-white' : 'text-slate-500'}`}
-          onClick={() => handleAdvance(nextRoundKey, matchIndex, team2)}
-          title={team2 ? "Klik untuk meloloskan tim ini" : ""}
-        >
-          {isEditable ? (
-            <input
-              type="text"
-              value={team2 || ''}
-              onChange={(e) => handleTeamNameChange(team2Index, e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-transparent text-white w-full outline-none font-semibold border-b border-transparent focus:border-blue-300 placeholder-slate-600"
-              placeholder="Nama Tim..."
-            />
-          ) : (
-            <span className="font-semibold truncate w-full">{team2 || '--'}</span>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // Komponen untuk satu kolom (kumpulan Match dalam 1 babak)
-  const renderColumn = (title, currentRoundKey, nextRoundKey, startIndex, matchCount) => {
-    const matches = [];
-    for (let i = 0; i < matchCount; i++) {
-      matches.push(renderMatch(currentRoundKey, nextRoundKey, startIndex + i, currentRoundKey === 'r32'));
-    }
-    return (
-      <div key={`${currentRoundKey}-${startIndex}`} className="flex flex-col min-w-max px-2">
-        <div className="text-center font-bold text-slate-400 mb-6 h-6 uppercase text-xs tracking-wider">{title}</div>
-        <div className="flex flex-col justify-around flex-grow py-2">
-          {matches}
-        </div>
-      </div>
-    );
-  };
-
-  // Komponen khusus untuk pertandingan Grand Final
-  const renderFinalMatch = () => {
-    const team1 = bracket.r2[0];
-    const team2 = bracket.r2[1];
-
-    return (
-      <div className="flex flex-col items-center mx-4 sm:mx-8 z-20 min-w-max">
-        <div className="text-xl font-black text-yellow-400 mb-6 text-center drop-shadow-md tracking-wider">GRAND FINAL</div>
+        /* Custom scrollbars for a premium feel */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: #0f172a; border-radius: 8px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 8px; border: 2px solid #0f172a; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
         
-        <div className="flex flex-col w-56 bg-slate-900 border-2 border-yellow-500 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(234,179,8,0.3)] m-2 text-base">
-          <div
-            className={`p-4 border-b border-slate-700 transition-colors text-center h-14 flex items-center justify-center
-              ${team1 ? 'cursor-pointer hover:bg-yellow-600 hover:text-white' : 'text-slate-500'}`}
-            onClick={() => setBracket(p => ({ ...p, champion: team1 }))}
-          >
-            <span className="font-bold truncate w-full">{team1 || 'Juara Pol A'}</span>
-          </div>
-          <div
-            className={`p-4 transition-colors text-center h-14 flex items-center justify-center
-              ${team2 ? 'cursor-pointer hover:bg-yellow-600 hover:text-white' : 'text-slate-500'}`}
-            onClick={() => setBracket(p => ({ ...p, champion: team2 }))}
-          >
-            <span className="font-bold truncate w-full">{team2 || 'Juara Pol B'}</span>
-          </div>
-        </div>
-
-        {/* Display Juara */}
-        <div className="mt-16 text-center">
-          <div className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-widest">🏆 Juara Turnamen 🏆</div>
-          <div className="px-8 py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-slate-900 font-black text-2xl rounded-full shadow-[0_0_30px_rgba(234,179,8,0.8)] min-w-[200px]">
-            {bracket.champion || '???'}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
-      {/* Header Aplikasi */}
-      <header className="bg-slate-900 border-b border-slate-800 p-6 flex flex-col sm:flex-row justify-between items-center shadow-md shrink-0">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-400">
-            Futsal Tournament Bracket
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Sistem Gugur 32 Tim - Dua Pol (A & B)</p>
-        </div>
-        <div className="mt-4 sm:mt-0 flex gap-4 items-center">
-          <p className="text-xs text-slate-500 hidden md:block max-w-xs text-right">
-            Ubah nama tim di kolom paling luar. Klik kotak tim untuk meloloskan mereka ke babak berikutnya.
-          </p>
-          <button 
-            onClick={resetBracket}
-            className="bg-red-900/50 hover:bg-red-600 text-red-200 hover:text-white border border-red-800 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-          >
-            Reset Bagan
-          </button>
-        </div>
-      </header>
-
-      {/* Area Bagan Utama */}
-      <main className="flex-grow overflow-x-auto overflow-y-auto relative p-8">
+        /* Ensure contenteditable looks correct when empty */
+        [contenteditable]:empty:before { content: "\feff"; display: block; min-width: 1em; }
         
-        {/* Background Watermark Pol A & B */}
-        <div className="absolute top-1/2 left-24 -translate-y-1/2 text-9xl font-black text-slate-800/30 pointer-events-none -z-10">POL A</div>
-        <div className="absolute top-1/2 right-24 -translate-y-1/2 text-9xl font-black text-slate-800/30 pointer-events-none -z-10">POL B</div>
+        .champion-glow {
+            box-shadow: 0 0 35px rgba(250, 204, 21, 0.7);
+            border-color: #facc15 !important;
+            transform: scale(1.05);
+            transition: all 0.5s ease-out;
+        }
 
-        <div className="flex items-stretch justify-center min-w-[1400px] min-h-[850px] h-full mx-auto">
-          
-          {/* POL A (Kiri ke Tengah) */}
-          <div className="flex flex-row flex-grow justify-end pr-2 space-x-2">
-            {renderColumn('Babak 32', 'r32', 'r16', 0, 8)}
-            {renderColumn('Babak 16', 'r16', 'r8', 0, 4)}
-            {renderColumn('8 Besar', 'r8', 'r4', 0, 2)}
-            {renderColumn('Semi Final', 'r4', 'r2', 0, 1)}
-          </div>
+        /* Dot grid background for the bracket canvas area */
+        .dot-grid {
+            background-image: radial-gradient(#334155 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
 
-          {/* GRAND FINAL (Tengah) */}
-          <div className="flex flex-col justify-center shrink-0">
-            {renderFinalMatch()}
-          </div>
+        /* Number input spinner hiding */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white h-screen flex flex-col overflow-hidden selection:bg-green-500 selection:text-white">
 
-          {/* POL B (Kanan ke Tengah - di-render terbalik secara visual) */}
-          <div className="flex flex-row-reverse flex-grow justify-end pl-2 space-x-2 space-x-reverse">
-            {renderColumn('Babak 32', 'r32', 'r16', 8, 8)}
-            {renderColumn('Babak 16', 'r16', 'r8', 4, 4)}
-            {renderColumn('8 Besar', 'r8', 'r4', 2, 2)}
-            {renderColumn('Semi Final', 'r4', 'r2', 1, 1)}
-          </div>
-
+    <!-- Header -->
+    <header class="bg-slate-950 px-6 py-4 border-b border-slate-800 flex justify-between items-center shadow-xl z-20 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.4)] border-2 border-slate-900">
+                <svg class="w-7 h-7 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-3xl font-black tracking-widest text-green-400">FUTSAL<span class="text-white">PRO</span></h1>
+                <p class="text-xs text-slate-400 font-semibold tracking-wide">32-TEAM KNOCKOUT STAGE</p>
+            </div>
         </div>
-      </main>
+        <div class="flex items-center space-x-6">
+            <div class="hidden md:flex flex-col text-right text-xs text-slate-400 font-medium">
+                <span>Click team names to edit.</span>
+                <span>Enter scores and click advance button.</span>
+            </div>
+            <button onclick="confirmReset()" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50 px-4 py-2 rounded-lg font-bold text-sm transition-colors duration-200">
+                Reset Bracket
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Scrollable Area -->
+    <main class="flex-1 overflow-auto bg-slate-900 relative">
+        <!-- Inner container stretching wide enough for all 9 columns -->
+        <div id="bracket-inner" class="min-w-[2400px] min-h-[900px] h-full p-12 relative flex dot-grid">
+            
+            <!-- Canvas for drawing connecting lines -->
+            <canvas id="lines-canvas" class="absolute top-0 left-0 w-full h-full z-0 pointer-events-none"></canvas>
+            
+            <!-- Bracket DOM Nodes -->
+            <div id="bracket-container" class="flex justify-between items-stretch w-full h-full z-10 relative">
+                <!-- Columns will be injected here via JavaScript -->
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- Custom Toast Notification -->
+    <div id="toast" style="opacity: 0; transform: translate(-50%, 100%); pointer-events: none;" class="fixed bottom-8 left-1/2 px-8 py-4 rounded-xl shadow-2xl transition-all duration-300 z-50 font-bold text-white text-center min-w-[300px] text-sm uppercase tracking-wide border border-white/20">
+        Message
     </div>
-  );
-}
+
+    <!-- Confirmation Modal for Reset -->
+    <div id="reset-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 max-w-sm w-full text-center transform scale-95 transition-transform duration-200" id="reset-modal-content">
+            <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Reset Entire Bracket?</h3>
+            <p class="text-slate-400 text-sm mb-6">This will wipe all custom team names, scores, and advancements. This action cannot be undone.</p>
+            <div class="flex space-x-3">
+                <button onclick="closeResetModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg font-semibold transition-colors">Cancel</button>
+                <button onclick="executeReset()" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-lg font-semibold transition-colors shadow-lg shadow-red-500/30">Yes, Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // -- DATA STRUCTURE & STATE MANAGEMENT --
+        let matches = {};
+        
+        // Define the next match logic and which slot (1 = top, 2 = bottom) the winner goes into
+        const setup = {
+            1: {next: 17, slot: 1}, 2: {next: 17, slot: 2}, 3: {next: 18, slot: 1}, 4: {next: 18, slot: 2},
+            5: {next: 19, slot: 1}, 6: {next: 19, slot: 2}, 7: {next: 20, slot: 1}, 8: {next: 20, slot: 2},
+            17: {next: 25, slot: 1}, 18: {next: 25, slot: 2}, 19: {next: 26, slot: 1}, 20: {next: 26, slot: 2},
+            25: {next: 29, slot: 1}, 26: {next: 29, slot: 2}, 29: {next: 31, slot: 1},
+            
+            9: {next: 21, slot: 1}, 10: {next: 21, slot: 2}, 11: {next: 22, slot: 1}, 12: {next: 22, slot: 2},
+            13: {next: 23, slot: 1}, 14: {next: 23, slot: 2}, 15: {next: 24, slot: 1}, 16: {next: 24, slot: 2},
+            21: {next: 27, slot: 1}, 22: {next: 27, slot: 2}, 23: {next: 28, slot: 1}, 24: {next: 28, slot: 2},
+            27: {next: 30, slot: 1}, 28: {next: 30, slot: 2}, 30: {next: 31, slot: 2},
+            
+            31: {next: null, slot: null}
+        };
+
+        // UI Columns map
+        const cols = [
+            { id: 'c1', matches: [1,2,3,4,5,6,7,8], side: 'left', title: 'Round of 32 (Pool A)' },
+            { id: 'c2', matches: [17,18,19,20], side: 'left', title: 'Round of 16' },
+            { id: 'c3', matches: [25,26], side: 'left', title: 'Quarter-Finals' },
+            { id: 'c4', matches: [29], side: 'left', title: 'Semi-Finals' },
+            { id: 'c5', matches: [31], side: 'center', title: 'Grand Final' },
+            { id: 'c6', matches: [30], side: 'right', title: 'Semi-Finals' },
+            { id: 'c7', matches: [27,28], side: 'right', title: 'Quarter-Finals' },
+            { id: 'c8', matches: [21,22,23,24], side: 'right', title: 'Round of 16' },
+            { id: 'c9', matches: [9,10,11,12,13,14,15,16], side: 'right', title: 'Round of 32 (Pool B)' },
+        ];
+
+        function createDefaultMatches() {
+            let initialMatches = {};
+            for (let i = 1; i <= 31; i++) {
+                initialMatches[i] = {
+                    id: i,
+                    t1: '', t2: '',
+                    s1: '', s2: '',
+                    next: setup[i].next,
+                    slot: setup[i].slot
+                };
+            }
+
+            // Assign 32 default teams
+            for (let i = 0; i < 8; i++) {
+                // Pool A
+                initialMatches[i+1].t1 = `Team A${i*2 + 1}`;
+                initialMatches[i+1].t2 = `Team A${i*2 + 2}`;
+                // Pool B
+                initialMatches[i+9].t1 = `Team B${i*2 + 1}`;
+                initialMatches[i+9].t2 = `Team B${i*2 + 2}`;
+            }
+            return initialMatches;
+        }
+
+        function saveState() {
+            localStorage.setItem('futsalBracketData', JSON.stringify(matches));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('futsalBracketData');
+            if (saved) {
+                try {
+                    matches = JSON.parse(saved);
+                    return true;
+                } catch(e) { console.error("Error parsing save data"); }
+            }
+            return false;
+        }
+
+        function init() {
+            if (!loadState()) {
+                matches = createDefaultMatches();
+                saveState();
+            }
+            render();
+            // Wait for DOM & Fonts before drawing perfect lines
+            document.fonts.ready.then(() => {
+                setTimeout(drawLines, 100);
+            });
+        }
+
+        // -- RENDERING LOGIC --
+        function render() {
+            const container = document.getElementById('bracket-container');
+            container.innerHTML = '';
+
+            cols.forEach((col, index) => {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'flex flex-col justify-around items-center h-full w-48 relative space-y-4';
+                
+                // Column Header
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'absolute -top-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-full text-center whitespace-nowrap bg-slate-900/80 rounded py-1';
+                titleDiv.innerText = col.title;
+                colDiv.appendChild(titleDiv);
+                
+                col.matches.forEach(mId => {
+                    colDiv.innerHTML += generateMatchHTML(mId, col.side);
+                });
+                
+                container.appendChild(colDiv);
+            });
+
+            drawLines();
+        }
+
+        function generateMatchHTML(mId, side) {
+            const match = matches[mId];
+            const isFinal = mId === 31;
+            
+            const borderClass = isFinal ? 'border-yellow-500' : 'border-slate-700 hover:border-green-500/80';
+            const bgHeaderClass = isFinal ? 'bg-yellow-500 text-slate-950' : 'bg-slate-950 text-slate-400';
+            
+            let btnHtml = '';
+            if (!isFinal) {
+                const isLeft = side === 'left';
+                const posClass = isLeft ? '-right-3.5' : '-left-3.5';
+                const iconDir = isLeft ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7';
+                
+                btnHtml = `<button onclick="advanceWinner(${mId})" class="absolute ${posClass} top-1/2 transform -translate-y-1/2 w-7 h-7 bg-slate-800 hover:bg-green-500 border-2 border-slate-900 rounded-full flex items-center justify-center z-10 transition-colors group shadow-lg" title="Advance Winner">
+                    <svg class="w-3.5 h-3.5 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="${iconDir}"></path></svg>
+                </button>`;
+            } else {
+                btnHtml = `<button onclick="declareChampion()" class="absolute -bottom-5 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-yellow-500 hover:bg-yellow-400 border-4 border-slate-900 rounded-full flex items-center justify-center z-10 transition-colors group shadow-[0_0_15px_rgba(250,204,21,0.5)]" title="Declare Champion">
+                    <svg class="w-5 h-5 text-slate-900 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path></svg>
+                </button>`;
+            }
+
+            return `
+                <div id="match-${mId}" class="match-card bg-slate-800/90 rounded-lg shadow-xl border-2 ${borderClass} w-48 relative flex flex-col transition-all duration-200 z-10 backdrop-blur-sm">
+                    <div class="${bgHeaderClass} text-[10px] font-black uppercase tracking-widest text-center py-1 rounded-t-md">
+                        ${isFinal ? 'Grand Final' : 'Match ' + mId}
+                    </div>
+                    
+                    <div class="p-2 space-y-1.5">
+                        <div class="flex items-center justify-between group min-w-0">
+                            <span class="flex-1 min-w-0 text-sm font-semibold truncate text-gray-100 outline-none focus:bg-slate-700 focus:text-white focus:ring-1 focus:ring-slate-500 rounded px-1.5 py-0.5 cursor-text transition-colors" contenteditable="true" onblur="updateTeam(${mId}, 1, this.innerText)" title="${match.t1}">${match.t1}</span>
+                            <input type="number" min="0" class="w-10 h-7 bg-slate-950/80 border border-slate-700 text-white text-center text-sm font-bold rounded focus:border-${isFinal?'yellow':'green'}-500 focus:ring-1 focus:ring-${isFinal?'yellow':'green'}-500 outline-none transition-all ml-2" value="${match.s1}" onchange="updateScore(${mId}, 1, this.value)" placeholder="-">
+                        </div>
+                        <div class="flex items-center justify-between group min-w-0">
+                            <span class="flex-1 min-w-0 text-sm font-semibold truncate text-gray-100 outline-none focus:bg-slate-700 focus:text-white focus:ring-1 focus:ring-slate-500 rounded px-1.5 py-0.5 cursor-text transition-colors" contenteditable="true" onblur="updateTeam(${mId}, 2, this.innerText)" title="${match.t2}">${match.t2}</span>
+                            <input type="number" min="0" class="w-10 h-7 bg-slate-950/80 border border-slate-700 text-white text-center text-sm font-bold rounded focus:border-${isFinal?'yellow':'green'}-500 focus:ring-1 focus:ring-${isFinal?'yellow':'green'}-500 outline-none transition-all ml-2" value="${match.s2}" onchange="updateScore(${mId}, 2, this.value)" placeholder="-">
+                        </div>
+                    </div>
+                    ${btnHtml}
+                </div>
+            `;
+        }
+
+        // -- DYNAMIC CANVAS CONNECTING LINES --
+        function drawLines() {
+            const canvas = document.getElementById('lines-canvas');
+            const inner = document.getElementById('bracket-inner');
+            const ctx = canvas.getContext('2d');
+            
+            const dpr = window.devicePixelRatio || 1;
+            const rect = inner.getBoundingClientRect();
+            
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            canvas.style.width = `${rect.width}px`;
+            canvas.style.height = `${rect.height}px`;
+            
+            ctx.clearRect(0, 0, rect.width, rect.height);
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#475569'; // slate-600
+            
+            function getRect(id) {
+                const el = document.getElementById(`match-${id}`);
+                if(!el) return null;
+                const elRect = el.getBoundingClientRect();
+                // Get coords relative to the scrolling container's inner content
+                return {
+                    x: elRect.left - rect.left,
+                    y: elRect.top - rect.top,
+                    w: elRect.width,
+                    h: elRect.height
+                };
+            }
+            
+            for (let i = 1; i <= 31; i++) {
+                const match = matches[i];
+                if (!match.next) continue;
+                
+                const rect1 = getRect(i);
+                const rect2 = getRect(match.next);
+                
+                if (!rect1 || !rect2) continue;
+                
+                const isLeft = [1,2,3,4,5,6,7,8,17,18,19,20,25,26,29].includes(i);
+                const hasWinner = matches[i].s1 !== '' && matches[i].s2 !== '' && (parseInt(matches[i].s1) !== parseInt(matches[i].s2));
+                
+                // Subtle highlight if match is completed
+                ctx.strokeStyle = hasWinner ? '#22c55e' : '#475569'; 
+                ctx.beginPath();
+
+                if (isLeft) {
+                    const startX = rect1.x + rect1.w;
+                    const startY = rect1.y + rect1.h / 2;
+                    const endX = rect2.x;
+                    const endY = rect2.y + rect2.h / 2;
+                    
+                    ctx.moveTo(startX, startY);
+                    const midX = startX + (endX - startX) / 2;
+                    ctx.lineTo(midX, startY);
+                    ctx.lineTo(midX, endY);
+                    ctx.lineTo(endX, endY);
+                } else {
+                    // Pool B (draws right to left visually)
+                    const startX = rect1.x;
+                    const startY = rect1.y + rect1.h / 2;
+                    const endX = rect2.x + rect2.w;
+                    const endY = rect2.y + rect2.h / 2;
+                    
+                    ctx.moveTo(startX, startY);
+                    const midX = startX + (endX - startX) / 2;
+                    ctx.lineTo(midX, startY);
+                    ctx.lineTo(midX, endY);
+                    ctx.lineTo(endX, endY);
+                }
+                ctx.stroke();
+            }
+        }
+
+        window.addEventListener('resize', drawLines);
+
+        // -- INTERACTION & LOGIC --
+        window.updateTeam = function(id, teamNum, val) {
+            // Clean zero-width chars and trim
+            const cleanVal = val.replace(/\uFEFF/g, '').trim();
+            if (teamNum === 1) matches[id].t1 = cleanVal;
+            if (teamNum === 2) matches[id].t2 = cleanVal;
+            saveState();
+        };
+
+        window.updateScore = function(id, teamNum, val) {
+            if (teamNum === 1) matches[id].s1 = val;
+            if (teamNum === 2) matches[id].s2 = val;
+            saveState();
+        };
+
+        window.advanceWinner = function(id) {
+            const match = matches[id];
+            const s1 = match.s1 === '' ? null : parseInt(match.s1);
+            const s2 = match.s2 === '' ? null : parseInt(match.s2);
+            
+            if (s1 === null || s2 === null) {
+                showToast("Please enter scores for both teams before advancing.", "error");
+                return;
+            }
+            if (s1 === s2) {
+                showToast("Match is tied! Adjust scores to determine a winner.", "error");
+                return;
+            }
+            if (!match.t1 || !match.t2) {
+                showToast("Both team names must be filled to advance.", "error");
+                return;
+            }
+            
+            const winner = s1 > s2 ? match.t1 : match.t2;
+            const nextId = match.next;
+            const slot = match.slot;
+            
+            if (slot === 1) {
+                matches[nextId].t1 = winner;
+            } else {
+                matches[nextId].t2 = winner;
+            }
+            
+            // Clear scores for the new match segment
+            matches[nextId].s1 = '';
+            matches[nextId].s2 = '';
+            
+            saveState();
+            render(); 
+            showToast(`✅ ${winner} advanced to next round!`, "success");
+        };
+
+        window.declareChampion = function() {
+            const match = matches[31];
+            const s1 = match.s1 === '' ? null : parseInt(match.s1);
+            const s2 = match.s2 === '' ? null : parseInt(match.s2);
+            
+            if (s1 === null || s2 === null || s1 === s2) {
+                showToast("Enter valid, winning scores to crown the Champion!", "error");
+                return;
+            }
+            
+            const winner = s1 > s2 ? match.t1 : match.t2;
+            const finalCard = document.getElementById('match-31');
+            
+            // Visual flair
+            finalCard.classList.add('champion-glow');
+            setTimeout(() => { finalCard.classList.remove('champion-glow'); }, 3000);
+            
+            showToast(`🏆 ${winner.toUpperCase()} IS THE CHAMPION! 🏆`, "champion");
+        };
+
+        // -- UI HELPERS --
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            
+            // Reset classes
+            toast.className = 'fixed bottom-8 left-1/2 px-8 py-4 rounded-xl shadow-2xl transition-all duration-300 z-50 font-bold text-white text-center min-w-[300px] text-sm uppercase tracking-wide border border-white/20';
+            
+            if (type === 'error') {
+                toast.classList.add('bg-red-600');
+            } else if (type === 'success') {
+                toast.classList.add('bg-emerald-600');
+            } else if (type === 'champion') {
+                toast.classList.add('bg-yellow-500', 'text-slate-900', 'border-yellow-300', 'shadow-[0_0_40px_rgba(250,204,21,0.6)]', 'text-lg');
+            } else {
+                toast.classList.add('bg-blue-600');
+            }
+            
+            toast.style.transform = 'translate(-50%, 0)';
+            toast.style.opacity = '1';
+            
+            setTimeout(() => {
+                toast.style.transform = 'translate(-50%, 100%)';
+                toast.style.opacity = '0';
+            }, 3500);
+        }
+
+        // Modals
+        window.confirmReset = function() {
+            const modal = document.getElementById('reset-modal');
+            const content = document.getElementById('reset-modal-content');
+            modal.classList.remove('hidden');
+            // Small timeout to allow display:block to apply before animating scale
+            setTimeout(() => content.classList.replace('scale-95', 'scale-100'), 10);
+        };
+
+        window.closeResetModal = function() {
+            const modal = document.getElementById('reset-modal');
+            const content = document.getElementById('reset-modal-content');
+            content.classList.replace('scale-100', 'scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        };
+
+        window.executeReset = function() {
+            matches = createDefaultMatches();
+            saveState();
+            render();
+            closeResetModal();
+            showToast("Bracket has been successfully reset.", "success");
+        };
+
+        // Bootstrap App
+        init();
+
+    </script>
+</body>
+</html>
