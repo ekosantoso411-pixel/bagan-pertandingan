@@ -31,6 +31,24 @@
             background-size: 24px 24px;
         }
 
+        /* Tambahan Tema Futsal */
+        .stadium-bg {
+            background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 60%, #020617 100%);
+        }
+        
+        .scoreboard-input {
+            background-color: #000;
+            color: #22c55e;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+        
+        .match-card {
+            border-radius: 0.75rem;
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
         /* Number input spinner hiding */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { 
@@ -39,10 +57,10 @@
         }
     </style>
 </head>
-<body class="bg-slate-900 text-white h-screen flex flex-col overflow-hidden selection:bg-green-500 selection:text-white">
+<body class="bg-slate-950 text-white h-screen flex flex-col overflow-hidden selection:bg-green-500 selection:text-white">
 
     <!-- Header -->
-    <header class="bg-slate-950 px-6 py-4 border-b border-slate-800 flex justify-between items-center shadow-xl z-20 shrink-0">
+    <header class="bg-slate-900/80 backdrop-blur-md border-b border-green-500/30 px-6 py-4 flex justify-between items-center shadow-[0_4px_30px_rgba(34,197,94,0.15)] z-20 shrink-0">
         <div class="flex items-center space-x-3">
             <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.4)] border-2 border-slate-900">
                 <svg class="w-7 h-7 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,9 +84,9 @@
     </header>
 
     <!-- Main Scrollable Area -->
-    <main class="flex-1 overflow-auto bg-slate-900 relative">
+    <main class="flex-1 overflow-auto stadium-bg relative">
         <!-- Inner container stretching wide enough for all 9 columns -->
-        <div id="bracket-inner" class="min-w-[2400px] min-h-[900px] h-full p-12 relative flex dot-grid">
+        <div id="bracket-inner" class="min-w-[2800px] min-h-[900px] h-full p-12 relative flex dot-grid opacity-95">
             
             <!-- Canvas for drawing connecting lines -->
             <canvas id="lines-canvas" class="absolute top-0 left-0 w-full h-full z-0 pointer-events-none"></canvas>
@@ -191,16 +209,22 @@
 
             cols.forEach((col, index) => {
                 const colDiv = document.createElement('div');
-                colDiv.className = 'flex flex-col justify-around items-center h-full w-48 relative space-y-4';
+                // Use precise flex heights instead of justify-around for perfect geometric alignment
+                colDiv.className = 'flex flex-col items-center h-full w-56 relative';
                 
                 // Column Header
                 const titleDiv = document.createElement('div');
-                titleDiv.className = 'absolute -top-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-full text-center whitespace-nowrap bg-slate-900/80 rounded py-1';
+                titleDiv.className = 'absolute -top-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest w-full text-center whitespace-nowrap bg-slate-900/90 border border-slate-700/50 rounded py-1.5 shadow-lg z-20';
                 titleDiv.innerText = col.title;
                 colDiv.appendChild(titleDiv);
                 
                 col.matches.forEach(mId => {
-                    colDiv.innerHTML += generateMatchHTML(mId, col.side);
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'w-full flex items-center justify-center relative';
+                    // Precisely divide the vertical space based on matches in this round
+                    wrapper.style.height = `${100 / col.matches.length}%`;
+                    wrapper.innerHTML = generateMatchHTML(mId, col.side);
+                    colDiv.appendChild(wrapper);
                 });
                 
                 container.appendChild(colDiv);
@@ -213,38 +237,47 @@
             const match = matches[mId];
             const isFinal = mId === 31;
             
-            const borderClass = isFinal ? 'border-yellow-500' : 'border-slate-700 hover:border-green-500/80';
-            const bgHeaderClass = isFinal ? 'bg-yellow-500 text-slate-950' : 'bg-slate-950 text-slate-400';
+            const borderClass = isFinal ? 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)]' : 'border-slate-700 hover:border-green-500/80 hover:shadow-[0_0_15px_rgba(34,197,94,0.2)]';
+            const bgHeaderClass = isFinal ? 'bg-gradient-to-r from-yellow-500 via-yellow-300 to-yellow-500 text-slate-900' : 'bg-slate-900 text-slate-400 border-b border-slate-800';
             
             let btnHtml = '';
             if (!isFinal) {
                 const isLeft = side === 'left';
-                const posClass = isLeft ? '-right-3.5' : '-left-3.5';
+                const posClass = isLeft ? '-right-4' : '-left-4';
                 const iconDir = isLeft ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7';
                 
-                btnHtml = `<button onclick="advanceWinner(${mId})" class="absolute ${posClass} top-1/2 transform -translate-y-1/2 w-7 h-7 bg-slate-800 hover:bg-green-500 border-2 border-slate-900 rounded-full flex items-center justify-center z-10 transition-colors group shadow-lg" title="Advance Winner">
-                    <svg class="w-3.5 h-3.5 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="${iconDir}"></path></svg>
+                btnHtml = `<button onclick="advanceWinner(${mId})" class="absolute ${posClass} top-1/2 transform -translate-y-1/2 w-8 h-8 bg-slate-800 hover:bg-green-500 border-2 border-slate-900 rounded-full flex items-center justify-center z-20 transition-all duration-300 group shadow-lg" title="Advance Winner">
+                    <svg class="w-4 h-4 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="${iconDir}"></path></svg>
                 </button>`;
             } else {
-                btnHtml = `<button onclick="declareChampion()" class="absolute -bottom-5 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-yellow-500 hover:bg-yellow-400 border-4 border-slate-900 rounded-full flex items-center justify-center z-10 transition-colors group shadow-[0_0_15px_rgba(250,204,21,0.5)]" title="Declare Champion">
-                    <svg class="w-5 h-5 text-slate-900 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path></svg>
+                btnHtml = `<button onclick="declareChampion()" class="absolute -bottom-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500 border-4 border-slate-900 rounded-full flex items-center justify-center z-20 transition-all duration-300 group shadow-[0_0_20px_rgba(250,204,21,0.6)] hover:scale-110" title="Declare Champion">
+                    <svg class="w-6 h-6 text-slate-900" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path></svg>
                 </button>`;
             }
 
+            // Shield icon placeholder for teams
+            const shieldSVG = `<svg class="w-4 h-4 text-slate-500 opacity-70 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+
             return `
-                <div id="match-${mId}" class="match-card bg-slate-800/90 rounded-lg shadow-xl border-2 ${borderClass} w-48 relative flex flex-col transition-all duration-200 z-10 backdrop-blur-sm">
-                    <div class="${bgHeaderClass} text-[10px] font-black uppercase tracking-widest text-center py-1 rounded-t-md">
-                        ${isFinal ? 'Grand Final' : 'Match ' + mId}
+                <div id="match-${mId}" class="match-card border-2 ${borderClass} w-full relative flex flex-col transition-all duration-300 z-10 bg-slate-800/80 backdrop-blur-sm rounded-xl">
+                    <div class="${bgHeaderClass} text-[10px] font-black uppercase tracking-widest text-center py-1.5 rounded-t-lg">
+                        ${isFinal ? '🏆 GRAND FINAL 🏆' : 'MATCH ' + mId}
                     </div>
                     
                     <div class="p-2 space-y-1.5">
-                        <div class="flex items-center justify-between group min-w-0">
-                            <span class="flex-1 min-w-0 text-sm font-semibold truncate text-gray-100 outline-none focus:bg-slate-700 focus:text-white focus:ring-1 focus:ring-slate-500 rounded px-1.5 py-0.5 cursor-text transition-colors" contenteditable="true" onblur="updateTeam(${mId}, 1, this.innerText)" title="${match.t1}">${match.t1}</span>
-                            <input type="number" min="0" class="w-10 h-7 bg-slate-950/80 border border-slate-700 text-white text-center text-sm font-bold rounded focus:border-${isFinal?'yellow':'green'}-500 focus:ring-1 focus:ring-${isFinal?'yellow':'green'}-500 outline-none transition-all ml-2" value="${match.s1}" onchange="updateScore(${mId}, 1, this.value)" placeholder="-">
+                        <div class="flex items-center justify-between group bg-slate-950/50 rounded-md p-1.5 border border-slate-700/50">
+                            <div class="flex items-center flex-1 min-w-0 pr-2 space-x-1.5">
+                                ${shieldSVG}
+                                <span class="flex-1 min-w-0 text-sm font-bold truncate text-gray-100 outline-none focus:bg-slate-700 focus:text-white rounded px-1 cursor-text transition-colors" contenteditable="true" onblur="updateTeam(${mId}, 1, this.innerText)" title="${match.t1}">${match.t1}</span>
+                            </div>
+                            <input type="number" min="0" class="scoreboard-input w-10 h-8 border border-slate-700 text-center font-bold rounded focus:border-${isFinal?'yellow':'green'}-500 focus:ring-1 focus:ring-${isFinal?'yellow':'green'}-500 outline-none transition-all shrink-0" value="${match.s1}" onchange="updateScore(${mId}, 1, this.value)" placeholder="-">
                         </div>
-                        <div class="flex items-center justify-between group min-w-0">
-                            <span class="flex-1 min-w-0 text-sm font-semibold truncate text-gray-100 outline-none focus:bg-slate-700 focus:text-white focus:ring-1 focus:ring-slate-500 rounded px-1.5 py-0.5 cursor-text transition-colors" contenteditable="true" onblur="updateTeam(${mId}, 2, this.innerText)" title="${match.t2}">${match.t2}</span>
-                            <input type="number" min="0" class="w-10 h-7 bg-slate-950/80 border border-slate-700 text-white text-center text-sm font-bold rounded focus:border-${isFinal?'yellow':'green'}-500 focus:ring-1 focus:ring-${isFinal?'yellow':'green'}-500 outline-none transition-all ml-2" value="${match.s2}" onchange="updateScore(${mId}, 2, this.value)" placeholder="-">
+                        <div class="flex items-center justify-between group bg-slate-950/50 rounded-md p-1.5 border border-slate-700/50">
+                            <div class="flex items-center flex-1 min-w-0 pr-2 space-x-1.5">
+                                ${shieldSVG}
+                                <span class="flex-1 min-w-0 text-sm font-bold truncate text-gray-100 outline-none focus:bg-slate-700 focus:text-white rounded px-1 cursor-text transition-colors" contenteditable="true" onblur="updateTeam(${mId}, 2, this.innerText)" title="${match.t2}">${match.t2}</span>
+                            </div>
+                            <input type="number" min="0" class="scoreboard-input w-10 h-8 border border-slate-700 text-center font-bold rounded focus:border-${isFinal?'yellow':'green'}-500 focus:ring-1 focus:ring-${isFinal?'yellow':'green'}-500 outline-none transition-all shrink-0" value="${match.s2}" onchange="updateScore(${mId}, 2, this.value)" placeholder="-">
                         </div>
                     </div>
                     ${btnHtml}
@@ -268,8 +301,9 @@
             canvas.style.height = `${rect.height}px`;
             
             ctx.clearRect(0, 0, rect.width, rect.height);
-            ctx.lineWidth = 2.5;
-            ctx.strokeStyle = '#475569'; // slate-600
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
             
             function getRect(id) {
                 const el = document.getElementById(`match-${id}`);
@@ -296,8 +330,10 @@
                 const isLeft = [1,2,3,4,5,6,7,8,17,18,19,20,25,26,29].includes(i);
                 const hasWinner = matches[i].s1 !== '' && matches[i].s2 !== '' && (parseInt(matches[i].s1) !== parseInt(matches[i].s2));
                 
-                // Subtle highlight if match is completed
+                // Highlight line in Neon Green if match is completed
                 ctx.strokeStyle = hasWinner ? '#22c55e' : '#475569'; 
+                ctx.shadowColor = hasWinner ? '#22c55e' : 'transparent';
+                ctx.shadowBlur = hasWinner ? 8 : 0;
                 ctx.beginPath();
 
                 if (isLeft) {
